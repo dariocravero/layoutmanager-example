@@ -64,6 +64,7 @@ function(bocoup, Backbone, Commit) {
       app.commits.repo = model.get("name");
 
       app.commits.fetch();
+      app.router.navigate(app.users.org+'/'+app.repos.user+'/'+app.commits.repo);
     }
   });
 

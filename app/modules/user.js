@@ -63,6 +63,8 @@ function(bocoup, Backbone, Repo) {
 
       app.repos.user = model.get("login");
       app.repos.fetch();
+      app.commits.reset();
+      app.router.navigate(app.users.org+'/'+app.repos.user);
     }
   });
 
@@ -99,6 +101,9 @@ function(bocoup, Backbone, Repo) {
 
       app.users.org = name;
       app.users.fetch();
+      app.repos.reset();
+      app.commits.reset();
+      app.router.navigate(name);
     })
   });
 

@@ -55,6 +55,9 @@ function (bocoup, jQuery, Backbone, Repo, User, Commit) {
 
     // Shorthand the application namespace
     var app = bocoup.app;
+    app.repos = new Repo.Collection();
+    app.users = new User.Collection();
+    app.commits = new Commit.Collection();
 
     // Defining the application router, you can attach sub routers here.
     var Router = Backbone.Router.extend({
@@ -76,18 +79,101 @@ function (bocoup, jQuery, Backbone, Repo, User, Commit) {
       },
 
       routes: {
-        "": "index"
+        "": "index",
+        ":org": "index",
+        ":org/:user": "user",
+        ":org/:user/:repo": "repo"
       },
 
-      index: function() {
+      index: function(org) {
         var main = this.useLayout("main");
+        org = org || "bocoup";
+        if (app.users.org != org) {
+          app.users.org = org;
+          app.users.fetch();
+          app.repos.reset();
+          app.commits.reset();
+        }
 
-        app.repos = new Repo.Collection();
+        // Set all the views
+        main.setViews({
+          ".repos": new Repo.Views.List({
+            collection: app.repos
+          }),
 
-        app.users = new User.Collection([], { org: "bocoup" });
-        app.users.fetch();
+          ".users": new User.Views.List({
+            collection: app.users
+          }),
 
-        app.commits = new Commit.Collection();
+          ".commits": new Commit.Views.List({
+            collection: app.commits
+          })
+        });
+
+        // Render to the page
+        main.render(function(el) {
+          $("#main").html(el);
+        });
+      },
+      user: function(org, user) {
+        var main = this.useLayout("main");
+        function fetch_repos() {
+          if (app.repos.user != user) {
+            app.repos.user = user;
+            app.repos.fetch();
+          }
+          app.commits.reset();
+        }
+        if (app.users.org != org) {
+          app.users.org = org;
+          app.users.fetch().done(fetch_repos);
+        } else {
+          fetch_repos();
+        }
+
+        // Set all the views
+        main.setViews({
+          ".repos": new Repo.Views.List({
+            collection: app.repos
+          }),
+
+          ".users": new User.Views.List({
+            collection: app.users
+          }),
+
+          ".commits": new Commit.Views.List({
+            collection: app.commits
+          })
+        });
+
+        // Render to the page
+        main.render(function(el) {
+          $("#main").html(el);
+        });
+      },
+      repo: function(org, user, repo) {
+        var main = this.useLayout("main");
+        function fetch_commits() {
+          if (app.commits.user != user || app.commits.repo != repo) {
+            app.commits.user = user;
+            app.commits.repo = repo;
+            app.commits.fetch();
+          }
+        }
+        function fetch_repos() {
+          if (app.repos.user != user) {
+            app.repos.user = user;
+            app.repos.fetch().done(fetch_commits);
+          } else {
+            fetch_commits();
+          }
+        }
+        if (app.users.org != org) {
+          app.users.org = org;
+          app.users.fetch().done(fetch_repos);
+        } else {
+          fetch_repos();
+        }
 
         // Set all the views
         main.setViews({
@@ -116,7 +202,7 @@ function (bocoup, jQuery, Backbone, Repo, User, Commit) {
     app.router = new Router();
 
     // Trigger the initial route and enable HTML5 History API support
-    Backbone.history.start({ pushState: true });
+    Backbone.history.start({ pushState: false });
 
     // All navigation that is relative should be passed through the navigate
     // method, to be processed by the router.  If the link has a data-bypass
